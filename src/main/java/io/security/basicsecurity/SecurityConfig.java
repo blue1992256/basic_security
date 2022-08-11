@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -84,5 +85,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
           .tokenValiditySeconds(3600) // 쿠키의 만료시간 설정(초), default: 14일
           .alwaysRemember(false) // 사용자가 체크박스를 활성화하지 않아도 항상 실행, default: false
           .userDetailsService(userDetailsService);
+      http
+          .sessionManagement()
+          .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED) // 세션 정책
+          .sessionFixation().changeSessionId() // 세션 아이디 값을 변경함 (changeSessionId 가 기본값), 세션 고정 공격을 방지하기 위함
+          .maximumSessions(1)
+          .maxSessionsPreventsLogin(false); // default : false (이전 사용자의 세션을 만료), true : 이후 사용자의 로그인을 막음
+
   }
 }
