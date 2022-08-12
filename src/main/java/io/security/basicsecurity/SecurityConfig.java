@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,10 +16,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.logout.LogoutHandler;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 
 @Configuration
 @EnableWebSecurity
@@ -56,7 +62,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
               HttpServletResponse response, Authentication authentication)
               throws IOException, ServletException {
             System.out.println("authentication : " + authentication.getName());
-            response.sendRedirect("/");
+
+            // 로그인 성공 시 사용자가 이전에 가고자 했던 페이지로 리다이렉트
+            RequestCache requestCache = new HttpSessionRequestCache();
+            SavedRequest savedRequest =  requestCache.getRequest(request, response);
+            String redirectUrl = savedRequest.getRedirectUrl();
+            response.sendRedirect(redirectUrl);
           }
         })
         .failureHandler(new AuthenticationFailureHandler() {
@@ -101,6 +112,22 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
           .sessionFixation().changeSessionId() // 세션 아이디 값을 변경함 (changeSessionId 가 기본값), 세션 고정 공격을 방지하기 위함
           .maximumSessions(1)
           .maxSessionsPreventsLogin(false); // default : false (이전 사용자의 세션을 만료), true : 이후 사용자의 로그인을 막음
+      http
+          .exceptionHandling()
+//          .authenticationEntryPoint(new AuthenticationEntryPoint() {
+//            @Override
+//            public void commence(HttpServletRequest request, HttpServletResponse response,
+//                AuthenticationException authException) throws IOException, ServletException {
+//              response.sendRedirect("/login"); // 인증 실패 시 로그인 페이지로 이동
+//            }
+//          })
+          .accessDeniedHandler(new AccessDeniedHandler() {
+            @Override
+            public void handle(HttpServletRequest request, HttpServletResponse response,
+                AccessDeniedException accessDeniedException) throws IOException, ServletException {
+              response.sendRedirect("/denied"); // 인가 실패 시 인가실패 페이지로 이동
+            }
+          });
 
   }
 }
